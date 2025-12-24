@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Car Service — Мини‑приложение (Тёмная тема)</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0b0f14; /* very dark */
+      --panel:#0f1720; /* panel dark */
+      --muted:#9aa6b2;
+      --primary:#36a3ff; /* bright blue accent */
+      --accent:#e6eef9;
+      --success:#22c55e;
+      --shadow: 0 10px 30px rgba(2,6,23,0.6);
+      --radius:12px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#071018 0%,var(--bg) 100%);font-family:Inter,system-ui,Segoe UI,Roboto,Arial;color:var(--accent)}
+    .container{max-width:460px;margin:16px auto;padding:16px}
+    .app-card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:16px;padding:14px;box-shadow:var(--shadow);backdrop-filter: blur(6px);overflow:hidden;border:1px solid rgba(255,255,255,0.03)}
+    header.app-header{display:flex;align-items:center;gap:12px;padding:8px 6px}
+    .brand{display:flex;align-items:center;gap:10px}
+    .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg, rgba(54,163,255,0.12), rgba(19,88,200,0.08));display:flex;align-items:center;justify-content:center}
+    .logo svg{width:26px;height:26px;fill:var(--primary)}
+    .title{font-weight:700;font-size:18px;color:var(--accent)}
+    .subtitle{font-size:12px;color:var(--muted);margin-top:2px}
+    .hero{display:flex;flex-direction:column;align-items:center;padding:12px 6px}
+    .car-illustration{width:100%;height:150px;border-radius:12px;background:linear-gradient(90deg,#071222,#0b1220);display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid rgba(255,255,255,0.03)}
+    .car-illustration img{max-width:100%;height:100%;object-fit:cover;filter:contrast(1.02) saturate(0.9)}
+    .metrics{display:flex;gap:12px;margin-top:12px;width:100%}
+    .metric{flex:1;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.007));padding:12px;border-radius:12px;display:flex;flex-direction:column;border:1px solid rgba(255,255,255,0.02)}
+    .metric .label{font-size:12px;color:var(--muted)}
+    .metric .value{font-weight:700;font-size:18px;margin-top:6px;color:var(--accent)}
+    .main-cta{width:100%;display:block;margin-top:16px;padding:14px;border-radius:12px;border:none;background:linear-gradient(90deg,var(--primary),#1b8fe6);color:#061122;font-weight:700;font-size:16px;cursor:pointer}
+    .secondary-actions{display:flex;gap:10px;margin-top:12px}
+    .btn-outline{flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:var(--primary);font-weight:600;cursor:pointer}
+    nav.tabs{display:flex;gap:8px;margin-top:16px;padding:6px;width:100%}
+    nav.tabs button{flex:1;padding:10px;border-radius:10px;border:none;background:transparent;color:var(--muted);font-weight:600;cursor:pointer}
+    nav.tabs button.active{background:linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));color:var(--primary);box-shadow:0 6px 18px rgba(19,88,200,0.06)}
+    .history{margin-top:12px}
+    .history-list{display:flex;flex-direction:column;gap:12px}
+    .history-item{background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.008));border-radius:12px;padding:12px;display:flex;gap:12px;align-items:center;border:1px solid rgba(255,255,255,0.02)}
+    .hi-icon{width:44px;height:44px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(54,163,255,0.08);color:var(--primary)}
+    .hi-body{flex:1}
+    .hi-title{font-weight:600;font-size:15px;color:var(--accent)}
+    .hi-sub{font-size:13px;color:var(--muted);margin-top:6px}
+    .hi-meta{font-size:12px;color:var(--muted);margin-top:8px}
+    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;padding:20px}
+    .modal{background:linear-gradient(180deg,#09101a,#071018);width:100%;max-width:460px;border-radius:12px;padding:18px;border:1px solid rgba(255,255,255,0.03)}
+    .modal h3{margin:0 0 8px 0;color:var(--accent)}
+    .field{margin-top:10px}
+    .field label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+    .field input,.field textarea{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:#071018;color:var(--accent);font-size:14px}
+    .row{display:flex;gap:8px}
+    .modal-actions{display:flex;gap:8px;margin-top:14px}
+    .btn-cancel{flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:transparent;cursor:pointer;color:var(--muted)}
+    .btn-submit{flex:2;padding:10px;border-radius:10px;border:none;background:linear-gradient(90deg,var(--primary),#1b8fe6);color:#061122;cursor:pointer}
+    footer.note{font-size:12px;color:var(--muted);text-align:center;margin-top:12px}
+    @media (max-width:420px){.container{padding:10px}.car-illustration{height:120px}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="app-card">
+      <header class="app-header">
+        <div class="brand">
+          <div class="logo" aria-hidden="true">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16z"/></svg>
+          </div>
+          <div>
+            <div class="title">Car Service</div>
+            <div class="subtitle">Управление обслуживанием</div>
+          </div>
+        </div>
+        <div style="margin-left:auto;font-size:12px;color:var(--muted)">v1.0</div>
+      </header>
+      <div class="hero">
+        <div class="car-illustration">
+          <img src="https://images.unsplash.com/photo-1549921296-3f9a8d4b9dca?auto=format&fit=crop&w=900&q=60" alt="car"/>
+        </div>
+        <div class="metrics" role="region" aria-label="metrics">
+          <div class="metric">
+            <div class="label">Текущий пробег</div>
+            <div class="value" id="current-mileage">— км</div>
+          </div>
+          <div class="metric">
+            <div class="label">Гос. номер</div>
+            <div class="value" id="license-plate">—</div>
+          </div>
+        </div>
+        <button class="main-cta" id="openBooking">Записаться</button>
+        <div class="secondary-actions">
+          <button class="btn-outline" id="openHistory">История</button>
+          <button class="btn-outline" id="editCar">Редактировать</button>
+        </div>
+        <nav class="tabs" role="tablist">
+          <button class="active" data-tab="auto">Авто</button>
+          <button data-tab="history">История</button>
+          <button data-tab="profile">Профиль</button>
+        </nav>
+
+      <!-- Admin panel placeholder (rendered when is_admin) -->
+      <section id="admin-section" style="display:none; margin-top:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <h3 style="margin:0">Панель администратора</h3>
+          <div style="color:var(--muted);font-size:13px">Только для админов</div>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:10px">
+          <div style="flex:1;background:rgba(255,255,255,0.02);padding:10px;border-radius:8px">
+            <div style="font-size:12px;color:var(--muted)">Автомобилей</div>
+            <div id="admin-total-cars" style="font-weight:700;font-size:18px;margin-top:6px">—</div>
+          </div>
+          <div style="flex:1;background:rgba(255,255,255,0.02);padding:10px;border-radius:8px">
+            <div style="font-size:12px;color:var(--muted)">Открытых заявок</div>
+            <div id="admin-open-requests" style="font-weight:700;font-size:18px;margin-top:6px">—</div>
+          </div>
+        </div>
+
+        <div style="margin-top:12px">
+          <h4 style="margin:0 0 8px 0">Список заявок</h4>
+          <div id="admin-requests-list" style="display:flex;flex-direction:column;gap:8px"></div>
+        </div>
+      </section>
+
+      </div>
+      <section class="history" id="history-section" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <h3 style="margin:0">История обслуживания</h3>
+          <div style="color:var(--muted);font-size:13px">Последние записи</div>
+        </div>
+        <div class="history-list" id="history-list"></div>
+      </section>
+      <footer class="note">Данные синхронизируются с бэкендом.</footer>
+    </div>
+  </div>
+  <div class="modal-backdrop" id="modal">
+    <div class="modal" role="dialog" aria-modal="true">
+      <h3>Записаться на сервис</h3>
+      <div class="field">
+        <label>Причина</label>
+        <input id="reason" placeholder="Например: Замена масла" />
+      </div>
+      <div class="field">
+        <label>Текущий пробег (км)</label>
+        <input id="mileage" type="number" placeholder="Например: 52300" />
+      </div>
+      <div class="field">
+        <label>Описание (необязательно)</label>
+        <textarea id="description" rows="3" placeholder="Короткое описание"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="cancelBooking">Отмена</button>
+        <button class="btn-submit" id="sendBooking">Отправить</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    let carData = null;
+    const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+    if(tg){ tg.ready(); try{ if(tg.themeParams && tg.themeParams.bg_color) document.body.style.background = tg.themeParams.bg_color }catch(e){} }
+    function setMetric(id, val){ const el = document.getElementById(id); if(el) el.textContent = val }
+    function renderHistory(items){ const list = document.getElementById('history-list'); list.innerHTML=''; if(!items||items.length===0){ list.innerHTML='<div style="color:var(--muted);padding:12px">Записей нет</div>'; return } items.forEach(it=>{ const node=document.createElement('div'); node.className='history-item'; node.innerHTML=`<div class="hi-icon">🔧</div><div class="hi-body"><div class="hi-title">${it.type||'Обслуживание'}</div><div class="hi-sub">${it.date||''} — ${it.mileage?it.mileage+' км':''}</div><div class="hi-meta">${it.note||''}</div></div>`; list.appendChild(node) }) }
+    function loadMock(){ carData={id:1, make:'Audi', model:'A6', license_plate:'A123BC77', current_mileage:12345, history:[{date:'2024-03-15', type:'Замена масла', mileage:75300, note:'Полная замена масла'},{date:'2024-03-10', type:'Ротация шин', mileage:75000, note:'Ротация и балансировка'}]}; setMetric('current-mileage', carData.current_mileage.toLocaleString('ru-RU')+' км'); setMetric('license-plate', carData.license_plate); renderHistory(carData.history) }
+    const modal=document.getElementById('modal'); document.getElementById('openBooking').addEventListener('click',()=>{ modal.style.display='flex'; document.getElementById('reason').focus() }); document.getElementById('cancelBooking').addEventListener('click',()=>{ modal.style.display='none' });
+    async function sendBooking(){ const reason=document.getElementById('reason').value.trim(); const mileage=parseInt(document.getElementById('mileage').value||0,10); const description=document.getElementById('description').value.trim(); if(!reason){ alert('Укажите причину'); return } if(!mileage||mileage<=0){ if(!confirm('Пробег не указан или нулевой. Отправить заявку без пробега?')) return }
+      const payload={ action:'request_service', car_id:carData?carData.id:null, reason, mileage, description };
+      if(tg && tg.sendData){ try{ tg.sendData(JSON.stringify(payload)); }catch(e){ console.warn('sendData error',e); } } else { alert('Данные отправлены (локальный режим).'); }
+      modal.style.display='none'; setTimeout(()=>{ alert('Заявка отправлена. Ожидайте ответа от сервиса.') },200);
+    }
+    document.getElementById('sendBooking').addEventListener('click', sendBooking);
+    document.querySelectorAll('nav.tabs button').forEach(btn=>{ btn.addEventListener('click',()=>{ document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); const tab=btn.dataset.tab; document.getElementById('history-section').style.display = tab==='history'? 'block':'none'; }) })
+    if(tg && tg.initDataUnsafe){ try{ tg.sendData(JSON.stringify({action:'get_initial_data'})); }catch(e){ console.warn('init sendData failed',e) } }
+    document.addEventListener('DOMContentLoaded', ()=>{ loadMock() })
+  
+    // --- Admin handlers ---
+    async function handleAdminSummary(resp){
+      if(!resp || resp.status!=='ok') return;
+      document.getElementById('admin-total-cars').textContent = resp.summary.total_cars || '0';
+      document.getElementById('admin-open-requests').textContent = resp.summary.open_requests || '0';
+    }
+
+    async function renderAdminRequests(resp){
+      const list = document.getElementById('admin-requests-list'); list.innerHTML='';
+      if(!resp || resp.status!=='ok' || !resp.requests || resp.requests.length===0){ list.innerHTML='<div style="color:var(--muted)">Нет заявок</div>'; return }
+      resp.requests.forEach(r=>{
+        const item = document.createElement('div'); item.style.cssText='background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.008));padding:10px;border-radius:8px;display:flex;flex-direction:column';
+        item.innerHTML = `<div style="font-weight:600">Заявка #${r.id} — ${r.user_id ? 'пользователь '+r.user_id : ''}</div><div style="font-size:13px;color:var(--muted);margin-top:6px">${r.user_message}</div><div style="margin-top:8px;display:flex;gap:8px"><button style="padding:6px;border-radius:6px;border:none;background:var(--primary);color:#061122;font-weight:600" onclick='replyRequest(${r.id})'>Ответить</button></div>`;
+        list.appendChild(item);
+      })
+    }
+
+    function replyRequest(id){
+      const text = prompt('Введите ответ для пользователя:');
+      if(!text) return;
+      const payload = { action:'admin_reply_request', request_id:id, text:text };
+      try{ tg.sendData(JSON.stringify(payload)); alert('Ответ отправлен (ожидайте подтверждения).'); }
+      catch(e){ alert('Ошибка отправки: '+e); }
+    }
+
+    function showAdminPanel(){
+      document.getElementById('admin-section').style.display='block';
+      // fetch summary
+      try{ tg.sendData(JSON.stringify({action:'admin_get_summary'})); tg.sendData(JSON.stringify({action:'admin_get_requests'})); }
+      catch(e){ console.warn('admin sendData failed',e); }
+    }
+
+    // hook into awq responses: when answer_web_app_query returns, the Web App receives a message update
+    // We will parse text messages that contain JSON (our backend returns JSON via answer_web_app_query)
+    // For simplicity: when page loads we call get_initial_data and handle awq responses via incoming web_app_data is not available in client side.
+</script>
+
+<!-- Integration scripts for Mini-App API -->
+<script>
+  (function(){
+    const API_KEY = 'REPLACE_WITH_SECRET_API_KEY'; // <-- Замените на ваш SECRET_API_KEY
+    const API_BASE = (location.origin ? location.origin : window.location.protocol + '//' + window.location.host) + '/api';
+    const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+    const user = tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user : {};
+    const telegram_id = user.id || null;
+
+    function el(id){return document.getElementById(id)}
+
+    async function apiFetch(path, opts={}){
+      const headers = opts.headers || {};
+      headers['Content-Type'] = 'application/json';
+      headers['X-API-KEY'] = API_KEY;
+      const res = await fetch(API_BASE + path, Object.assign({headers: headers, credentials: 'include'}, opts));
+      if(!res.ok){
+        const txt = await res.text();
+        throw new Error('HTTP '+res.status+': '+txt);
+      }
+      return res.json();
+    }
+
+    async function loadCars(){
+      try{
+        if(!telegram_id){
+          el('cars-list').innerHTML = '<div class="hi-sub">Не удалось получить telegram_id. Откройте приложение через бота.</div>';
+          return;
+        }
+        const q = '/get_cars?telegram_id=' + encodeURIComponent(telegram_id);
+        const r = await apiFetch(q, {method: 'GET'});
+        const cars = r.cars || [];
+        if(cars.length===0){
+          el('cars-list').innerHTML = '<div class="hi-sub">У вас ещё нет привязанных автомобилей.</div>';
+          return;
+        }
+        const html = cars.map(c=>{
+          return `<div class="history-item" style="flex-direction:column;align-items:flex-start">
+            <div style="width:100%;display:flex;justify-content:space-between;align-items:center">
+              <div><b>${c.make} ${c.model}</b> <span style="color:var(--muted)">(${c.license_plate})</span></div>
+              <div style="font-weight:700">${c.current_mileage} км</div>
+            </div>
+            <div style="margin-top:8px;width:100%;display:flex;gap:8px">
+              <input type="number" id="m_${c.id}" placeholder="Новый пробег" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:var(--accent)">
+              <button onclick="updateMileage(${c.id}, false, false)" class="btn-outline">Обновить</button>
+              <button onclick="updateMileage(${c.id}, true, false)" class="main-cta" style="padding:8px 10px;">Сменить масло</button>
+            </div>
+          </div>`
+        }).join('');
+        el('cars-list').innerHTML = html;
+      }catch(e){
+        console.error(e);
+        el('cars-list').innerHTML = '<div class="hi-sub">Ошибка при загрузке: '+e.message+'</div>';
+      }
+    }
+
+    window.updateMileage = async function(car_id, set_oil, set_variator){
+      try{
+        const input = el('m_'+car_id);
+        const val = parseInt(input.value);
+        if(isNaN(val)){
+          alert('Введите корректный пробег');
+          return;
+        }
+        const body = {car_id: car_id, current_mileage: val, set_oil_change: !!set_oil, set_variator_change: !!set_variator, actor_telegram_id: telegram_id};
+        await apiFetch('/update_mileage', {method:'POST', body: JSON.stringify(body)});
+        alert('Пробег обновлён');
+        loadCars();
+      }catch(e){
+        console.error(e);
+        alert('Ошибка: '+e.message);
+      }
+    }
+
+    window.bindByCode = async function(){
+      try{
+        const code = el('bind-code').value.trim();
+        if(!code){alert('Введите код');return}
+        if(!telegram_id){alert('Не удалось получить telegram_id. Откройте мини‑апп через бота.');return}
+        const body = {binding_code: code, telegram_id: telegram_id, username: user.username, first_name: user.first_name, last_name: user.last_name};
+        const r = await apiFetch('/bind', {method:'POST', body: JSON.stringify(body)});
+        alert('Готово: ' + (r.message || 'Привязано'));
+        el('bind-code').value='';
+        loadCars();
+      }catch(e){console.error(e);alert('Ошибка: '+e.message)}
+    }
+
+    window.sendSupportRequest = async function(){
+      try{
+        const msg = el('support-msg').value.trim();
+        if(!msg){alert('Введите сообщение');return}
+        if(!telegram_id){alert('Не удалось получить telegram_id.');return}
+        const body = {telegram_id: telegram_id, message: msg};
+        const r = await apiFetch('/support_request', {method:'POST', body: JSON.stringify(body)});
+        alert('Заявка отправлена (ID: '+r.request_id+')');
+        el('support-msg').value='';
+      }catch(e){console.error(e);alert('Ошибка: '+e.message)}
+    }
+
+    // Init
+    document.addEventListener('DOMContentLoaded', function(){
+      // attach handlers
+      if(el('bind-btn')) el('bind-btn').addEventListener('click', bindByCode);
+      if(el('support-send')) el('support-send').addEventListener('click', sendSupportRequest);
+      loadCars();
+      if(tg) tg.expand();
+    });
+
+    // expose for debugging
+    window._miniapp = {apiBase: API_BASE, telegram_id: telegram_id, user: user};
+  })();
+</script>
+
+</body>
+</html>
