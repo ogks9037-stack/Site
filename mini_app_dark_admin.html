@@ -164,7 +164,8 @@
     function setMetric(id, val){ const el = document.getElementById(id); if(el) el.textContent = val }
     function renderHistory(items){ const list = document.getElementById('history-list'); list.innerHTML=''; if(!items||items.length===0){ list.innerHTML='<div style="color:var(--muted);padding:12px">Записей нет</div>'; return } items.forEach(it=>{ const node=document.createElement('div'); node.className='history-item'; node.innerHTML=`<div class="hi-icon">🔧</div><div class="hi-body"><div class="hi-title">${it.type||'Обслуживание'}</div><div class="hi-sub">${it.date||''} — ${it.mileage?it.mileage+' км':''}</div><div class="hi-meta">${it.note||''}</div></div>`; list.appendChild(node) }) }
     function loadMock(){ carData={id:1, make:'Audi', model:'A6', license_plate:'A123BC77', current_mileage:12345, history:[{date:'2024-03-15', type:'Замена масла', mileage:75300, note:'Полная замена масла'},{date:'2024-03-10', type:'Ротация шин', mileage:75000, note:'Ротация и балансировка'}]}; setMetric('current-mileage', carData.current_mileage.toLocaleString('ru-RU')+' км'); setMetric('license-plate', carData.license_plate); renderHistory(carData.history) }
-    const modal=document.getElementById('modal'); document.getElementById('openBooking').addEventListener('click',()=>{ modal.style.display='flex'; document.getElementById('reason').focus() }); document.getElementById('cancelBooking').addEventListener('click',()=>{ modal.style.display='none' });
+    const modal=document.getElementById('modal'); document.getElementById('openBooking').addEventListener('click',()=>{ modal.style.display='flex'; document.getElementById('reason').focus() });
+     document.getElementById('cancelBooking').addEventListener('click',()=>{ modal.style.display='none' });
     async function sendBooking(){ const reason=document.getElementById('reason').value.trim(); const mileage=parseInt(document.getElementById('mileage').value||0,10); const description=document.getElementById('description').value.trim(); if(!reason){ alert('Укажите причину'); return } if(!mileage||mileage<=0){ if(!confirm('Пробег не указан или нулевой. Отправить заявку без пробега?')) return }
       const payload={ action:'request_service', car_id:carData?carData.id:null, reason, mileage, description };
       if(tg && tg.sendData){ try{ tg.sendData(JSON.stringify(payload)); }catch(e){ console.warn('sendData error',e); } } else { alert('Данные отправлены (локальный режим).'); }
@@ -175,7 +176,8 @@
     if(tg && tg.initDataUnsafe){ try{ tg.sendData(JSON.stringify({action:'get_initial_data'})); }catch(e){ console.warn('init sendData failed',e) } }
     document.addEventListener('DOMContentLoaded', ()=>{ loadMock() })
   
-    // --- Admin handlers ---
+    
+// --- Admin handlers ---
     async function handleAdminSummary(resp){
       if(!resp || resp.status!=='ok') return;
       document.getElementById('admin-total-cars').textContent = resp.summary.total_cars || '0';
@@ -203,7 +205,7 @@
     function showAdminPanel(){
       document.getElementById('admin-section').style.display='block';
       // fetch summary
-      try{ tg.sendData(JSON.stringify({action:'admin_get_summary'})); tg.sendData(JSON.stringify({action:'admin_get_requests'})); }
+      try{ tg.sendData(JSON.stringify({action:'get_initial_data'})); tg.sendData(JSON.stringify({action:'admin_get_summary'})); tg.sendData(JSON.stringify({action:'admin_get_requests'})); }
       catch(e){ console.warn('admin sendData failed',e); }
     }
 
