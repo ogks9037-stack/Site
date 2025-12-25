@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Car Service Mini App</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        /* Базовые стили для соответствия Telegram */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--tg-theme-bg-color, #f4f4f5);
+            color: var(--tg-theme-text-color, #000);
+            margin: 0;
+            padding: 15px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        h1, h2 {
+            color: var(--tg-theme-text-color, #000);
+            margin-top: 0;
+        }
+        .card {
+            background-color: var(--tg-theme-secondary-bg-color, #fff);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid var(--tg-theme-hint-color, #ccc);
+        }
+        .status-item:last-child {
+            border-bottom: none;
+        }
+        .status-label {
+            color: var(--tg-theme-hint-color, #777);
+        }
+        .status-value {
+            font-weight: 600;
+        }
+        .color-green { color: #4CAF50; }
+        .color-yellow { color: #FFC107; }
+        .color-red { color: #F44336; }
+        
+        /* Формы и кнопки */
+        input[type="number"], textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            box-sizing: border-box;
+            border: 1px solid var(--tg-theme-hint-color, #ccc);
+            border-radius: 5px;
+            background-color: var(--tg-theme-bg-color, #f4f4f5);
+            color: var(--tg-theme-text-color, #000);
+        }
+        .btn-primary {
+            background-color: var(--tg-theme-button-color, #007bff);
+            color: var(--tg-theme-button-text-color, #fff);
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+        .admin-panel {
+            border: 2px dashed var(--tg-theme-link-color, #00f);
+            padding: 15px;
+            margin-top: 20px;
+        }
+        .log-entry {
+            margin-bottom: 10px;
+            padding: 5px;
+            border-left: 3px solid var(--tg-theme-link-color, #00f);
+            background-color: var(--tg-theme-bg-color, #f4f4f5);
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container" id="app-container">
+    
+    <div id="loading" class="card">Загрузка данных...</div>
+    
+    <div id="no-car" class="card" style="display: none;">
+        <h2>Нет привязанных автомобилей</h2>
+        <p>Пожалуйста, привяжите автомобиль в основном чате бота, используя команду /start и код привязки.</p>
+    </div>
+
+    <div id="user-view" style="display: none;">
+        
+        <div class="card">
+            <h2 id="car-title"></h2>
+            <p>Текущий пробег: <span id="current-mileage-display" class="status-value"></span> км</p>
+        </div>
+
+        <div class="card">
+            <h2>Статус обслуживания</h2>
+            <div class="status-item">
+                <span class="status-label">Масло ДВС (до замены)</span>
+                <span id="oil-status" class="status-value"></span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Масло вариатора (до замены)</span>
+                <span id="variator-status" class="status-value"></span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Обновить пробег</h2>
+            <form id="mileage-form">
+                <label for="new-mileage">Новый текущий пробег (км):</label>
+                <input type="number" id="new-mileage" required>
+                <button type="submit" class="btn-primary">Сохранить пробег</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>Запросить сервис</h2>
+            <form id="service-form">
+                <label for="service-reason">Причина запроса:</label>
+                <select id="service-reason" required>
+                    <option value="ТО (плановое)">Плановое ТО</option>
+                    <option value="Замена масла ДВС">Замена масла ДВС</option>
+                    <option value="Замена масла вариатора">Замена масла вариатора</option>
+                    <option value="Ремонт/Диагностика">Ремонт/Диагностика</option>
+                    <option value="Другое">Другое</option>
+                </select>
+                <label for="service-description">Описание проблемы/запроса:</label>
+                <textarea id="service-description" rows="3" required></textarea>
+                <button type="submit" class="btn-primary">Отправить запрос</button>
+            </form>
+        </div>
+        
+        <div class="card">
+            <h2>История обслуживания (последние 20)</h2>
+            <div id="history-logs">
+                <!-- Логи будут добавлены сюда -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Панель администратора (показывается только для админов) -->
+    <div id="admin-view" class="admin-panel" style="display: none;">
+        <h2>Админ-панель</h2>
+        <div class="card">
+            <h3>Сводка</h3>
+            <p>Всего автомобилей: <span id="admin-total-cars">...</span></p>
+            <p>Открытых заявок: <span id="admin-open-requests">...</span></p>
+            <button onclick="loadAdminRequests()" class="btn-primary">Показать заявки</button>
+        </div>
+
+        <div id="admin-requests-list" class="card" style="display: none;">
+            <h3>Открытые заявки</h3>
+<div id="requests-container"></div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const tg = window.Telegram.WebApp;
+    const CRITICAL_OIL_WARNING_THRESHOLD_MIN = 500;
+    const CRITICAL_OIL_WARNING_THRESHOLD_MAX = 2000;
+
+    let currentCarId = null;
+    let isAdmin = false;
+
+    // Инициализация WebApp
+    tg.ready();
+    tg.expand();
+    
+    // Устанавливаем тему
+    document.body.style.backgroundColor = tg.themeParams.bg_color || '#f4f4f5';
+    document.body.style.color = tg.themeParams.text_color || '#000';
+    
+    // Показываем главную кнопку, если она нужна
+    // tg.MainButton.setText("Закрыть").show().onClick(tg.close);
+
+    /**
+     * Отправляет данные в Python-бот через tg.sendData
+     * @param {string} action - Действие (например, 'get_initial_data')
+     * @param {object} payload - Дополнительные данные
+     */
+    function sendData(action, payload = {}) {
+        const data = { action, ...payload };
+        tg.sendData(JSON.stringify(data));
+    }
+
+    /**
+     * Обрабатывает ответ от Python-бота (tg.answerWebAppQuery)
+     * @param {object} event - Объект события
+     */
+    function handleResponse(event) {
+        try {
+            // Ответ приходит в виде JSON-строки в поле data
+            const response = JSON.parse(event.data);
+            
+            if (response.status === 'ok') {
+                if (response.message === 'no_cars') {
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('no-car').style.display = 'block';
+                    isAdmin = response.is_admin;
+                    if (isAdmin) {
+                        document.getElementById('admin-view').style.display = 'block';
+                        loadAdminSummary();
+                    }
+                    return;
+                }
+                
+                // Общие данные
+                isAdmin = response.is_admin;
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('user-view').style.display = 'block';
+
+                // Данные пользователя
+                displayCarInfo(response.car, response.reminders, response.history);
+                
+                // Данные администратора
+                if (isAdmin) {
+                    document.getElementById('admin-view').style.display = 'block';
+                    loadAdminSummary();
+                }
+            } else if (response.status === 'error') {
+                tg.showAlert(`Ошибка: ${response.message}`);
+            }
+            
+            // Обработка конкретных действий
+            if (response.action === 'update_mileage') {
+                tg.showAlert('Пробег успешно обновлен!');
+                // Перезагружаем данные для отображения
+                sendData('get_initial_data');
+            } else if (response.action === 'request_service') {
+                tg.showAlert('Запрос на сервис отправлен. Мы свяжемся с вами!');
+            } else if (response.action === 'admin_get_summary') {
+                document.getElementById('admin-total-cars').textContent = response.summary.total_cars;
+                document.getElementById('admin-open-requests').textContent = response.summary.open_requests;
+            } else if (response.action === 'admin_get_requests') {
+                displayAdminRequests(response.requests);
+            }
+            
+        } catch (e) {
+            tg.showAlert(`Ошибка обработки данных: ${e.message}`);
+            console.error(e);
+        }
+    }
+
+    tg.onEvent('mainButtonClicked', () => {
+        // Если кнопка используется для закрытия
+        tg.close();
+    });
+
+    tg.onEvent('webAppdata', handleResponse);
+
+    /**
+     * Отображает информацию об автомобиле
+     \
+             }
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+        .admin-panel {
+            border: 2px dashed var(--tg-theme-link-color, #00f);
+            padding: 15px;
+            margin-top: 20px;
+        }
+        .log-entry {
+            margin-bottom: 10px;
+            padding: 5px;
+            border-left: 3px solid var(--tg-theme-link-color, #00f);
+            background-color: var(--tg-theme-bg-color, #f4f4f5);
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container" id="app-container">
+    
+    <div id="loading" class="card">Загрузка данных...</div>
+    
+    <div id="no-car" class="card" style="display: none;">
+        <h2>Нет привязанных автомобилей</h2>
+        <p>Пожалуйста, привяжите автомобиль в основном чате бота, используя команду /start и код привязки.</p>
+    </div>
+
+    <div id="user-view" style="display: none;">
+        
+        <div class="card">
+            <h2 id="car-title"></h2>
+            <p>Текущий пробег: <span id="current-mileage-display" class="status-value"></span> км</p>
+        </div>
+
+        <div class="card">
+            <h2>Статус обслуживания</h2>
+            <div class="status-item">
+                <span class="status-label">Масло ДВС (до замены)</span>
+                <span id="oil-status" class="status-value"></span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Масло вариатора (до замены)</span>
+                <span id="variator-status" class="status-value"></span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Обновить пробег</h2>
+            <form id="mileage-form">
+                <label for="new-mileage">Новый текущий пробег (км):</label>
+                <input type="number" id="new-mileage" required>
+                <button type="submit" class="btn-primary">Сохранить пробег</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>Запросить сервис</h2>
+            <form id="service-form">
+                <label for="service-reason">Причина запроса:</label>
+                <select id="service-reason" required>
+                    <option value="ТО (плановое)">Плановое ТО</option>
+                    <option value="Замена масла ДВС">Замена масла ДВС</option>
+                    <option value="Замена масла вариатора">Замена масла вариатора</option>
+                    <option value="Ремонт/Диагностика">Ремонт/Диагностика</option>
+                    <option value="Другое">Другое</option>
+                </select>
+                <label for="service-description">Описание проблемы/запроса:</label>
+                <textarea id="service-description" rows="3" required></textarea>
+                <button type="submit" class="btn-primary">Отправить запрос</button>
+            </form>
+        </div>
+        
+        <div class="card">
+            <h2>История обслуживания (последние 20)</h2>
+            <div id="history-logs">
+                <!-- Логи будут добавлены сюда -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Панель администратора (показывается только для админов) -->
+    <div id="admin-view" class="admin-panel" style="display: none;">
+        <h2>Админ-панель</h2>
+        <div class="card">
+            <h3>Сводка</h3>
+            <p>Всего автомобилей: <span id="admin-total-cars">...</span></p>
+            <p>Открытых заявок: <span id="admin-open-requests">...</span></p>
+            <button onclick="loadAdminRequests()" class="btn-primary">Показать заявки</button>
+        </div>
+
+        <div id="admin-requests-list" class="card" style="display: none;">
+            <h3>Открытые заявки</h3>
+            <div id="
+requests-container"></div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const tg = window.Telegram.WebApp;
+    const CRITICAL_OIL_WARNING_THRESHOLD_MIN = 500;
+    const CRITICAL_OIL_WARNING_THRESHOLD_MAX = 2000;
+
+    let currentCarId = null;
+    let isAdmin = false;
+
+    // Инициализация WebApp
+    tg.ready();
+    tg.expand();
+    
+    // Устанавливаем тему
+    document.body.style.backgroundColor = tg.themeParams.bg_color || '#f4f4f5';
+    document.body.style.color = tg.themeParams.text_color || '#000';
+    
+    // Показываем главную кнопку, если она нужна
+    // tg.MainButton.setText("Закрыть").show().onClick(tg.close);
+
+    /**
+     * Отправляет данные в Python-бот через tg.sendData
+     * @param {string} action - Действие (например, 'get_initial_data')
+     * @param {object} payload - Дополнительные данные
+     */
+    function sendData(action, payload = {}) {
+        const data = { action, ...payload };
+        tg.sendData(JSON.stringify(data));
+    }
+
+    /**
+     * Обрабатывает ответ от Python-бота (tg.answerWebAppQuery)
+     * @param {object} event - Объект события
+     */
+    function handleResponse(event) {
+        try {
+            // Ответ приходит в виде JSON-строки в поле data
+            const response = JSON.parse(event.data);
+            
+            if (response.status === 'ok') {
+                if (response.message === 'no_cars') {
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('no-car').style.display = 'block';
+                    isAdmin = response.is_admin;
+                    if (isAdmin) {
+                        document.getElementById('admin-view').style.display = 'block';
+                        loadAdminSummary();
+                    }
+                    return;
+                }
+                
+                // Общие данные
+                isAdmin = response.is_admin;
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('user-view').style.display = 'block';
+
+                // Данные пользователя
+                displayCarInfo(response.car, response.reminders, response.history);
+                
+                // Данные администратора
+                if (isAdmin) {
+                    document.getElementById('admin-view').style.display = 'block';
+                    loadAdminSummary();
+                }
+            } else if (response.status === 'error') {
+                tg.showAlert(`Ошибка: ${response.message}`);
+            }
+            
+            // Обработка конкретных действий
+            if (response.action === 'update_mileage') {
+                tg.showAlert('Пробег успешно обновлен!');
+                // Перезагружаем данные для отображения
+                sendData('get_initial_data');
+            } else if (response.action === 'request_service') {
+                tg.showAlert('Запрос на сервис отправлен. Мы свяжемся с вами!');
+            } else if (response.action === 'admin_get_summary') {
+                document.getElementById('admin-total-cars').textContent = response.summary.total_cars;
+                document.getElementById('admin-open-requests').textContent = response.summary.open_requests;
+            } else if (response.action === 'admin_get_requests') {
+                displayAdminRequests(response.requests);
+            }
+            
+        } catch (e) {
+            tg.showAlert(`Ошибка обработки данных: ${e.message}`);
+            console.error(e);
+        }
+    }
+
+    tg.onEvent('mainButtonClicked', () => {
+        // Если кнопка используется для закрытия
+        tg.close();
+    });
+
+    tg.onEvent('webAppdata', handleResponse);
+
+    /**
+     * Отображает информацию об автомобиле
+     */
+    function displayCarInfo(car, reminders, history) {
+        currentCarId = car.id;
+        document.getElementById('car-title').textContent = `${car.make} ${car.model} (${car.license_plate})`;
+        document.getElementById('current-mileage-display').textContent = car.current_mileage;
+        document.getElementById('new-mileage').value = car.current_mileage;
+
+        // Статус масла ДВС
+        const oilRemaining = reminders.oil_remaining;
+        const oilStatusEl = document.getElementById('oil-status');
+        oilStatusEl.textContent = `${oilRemaining} км`;
+        oilStatusEl.className = 'status-value';
+        if (oilRemaining <= CRITICAL_OIL_WARNING_THRESHOLD_MIN) {
+            oilStatusEl.classList.add('color-red');
+        } else if (oilRemaining <= CRITICAL_OIL_WARNING_THRESHOLD_MAX) {
+            oilStatusEl.classList.add('color-yellow');
+        } else {
+            oilStatusEl.classList.add('color-green');
+        }
+
+        // Статус масла вариатора
+        const variatorRemaining = reminders.variator_remaining;
+        const variatorStatusEl = document.getElementById('variator-status');
+        variatorStatusEl.textContent = `${variatorRemaining} км`;
+        variatorStatusEl.className = 'status-value';
+        if (variatorRemaining <= CRITICAL_OIL_WARNING_THRESHOLD_MIN) {
+            variatorStatusEl.classList.add('color-red');
+        } else if (variatorRemaining <= CRITICAL_OIL_WARNING_THRESHOLD_MAX) {
+            variatorStatusEl.classList.add('color-yellow');
+        } else {
+            variatorStatusEl.classList.add('color-green');
+        }
+        
+        // История
+        const historyContainer = document.getElementById('history-logs');
+        historyContainer.innerHTML = '';
+        if (history && history.length > 0) {
+            history.forEach(log => {
+                const div = document.createElement('div');
+                div.className = 'log-entry';
+                div.innerHTML = `<b>[${log.date.substring(0, 16)}] ${log.type}:</b> ${log.note}`;
+                historyContainer.appendChild(div);
+            });
+        } else {
+            historyContainer.innerHTML = '<p>Нет записей в истории.</p>';
+        }
+        
+        tg.MainButton.hide(); // Скрываем основную кнопку после загрузки
+    }
+
+    // --- Обработчики форм ---
+    
+    document.getElementById('mileage-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const newMileage = parseInt(document.getElementById('new-mileage').value);
+        
+        if (isNaN(newMileage) || newMileage <= 0) {
+            tg.showAlert('Пожалуйста, введите корректный положительный пробег.');
+            return;
+        }
+        
+        tg.showConfirm(`Вы уверены, что хотите установить пробег ${newMileage} км?`, (confirmed) => {
+            if (confirmed) {
+                sendData('update_mileage', { car_id: currentCarId, mileage: newMileage });
+            }
+        });
+    });
+
+    document.getElementById('service-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const reason = document.getElementById('service-reason').value;
+        const description = document.getElementById('service-description').value;
+        
+        if (!description.trim()) {
+            tg.showAlert('Пожалуйста, опишите причину запроса.');
+            return;
+        }
+        
+        tg.showConfirm(`Отправить запрос на сервис (${reason})?`, (confirmed) => {
+            if (confirmed) {
+                sendData('request_service', { 
+                    car_id: currentCarId, 
+                    reason: reason, 
+                    description: description,
+                    mileage: parseInt(document.getElementById('new-mileage').value) || 0
+                    });
+            }
+        });
+    });
+    
+    // --- Функции администратора ---
+    
+    function loadAdminSummary() {
+        if (isAdmin) {
+            sendData('admin_get_summary');
+        }
+    }
+    
+    function loadAdminRequests() {
+        if (isAdmin) {
+            sendData('admin_get_requests');
+        }
+    }
+    
+    function displayAdminRequests(requests) {
+        const container = document.getElementById('requests-container');
+        container.innerHTML = '';
+        document.getElementById('admin-requests-list').style.display = 'block';
+
+        if (requests.length === 0) {
+            container.innerHTML = '<p>Нет открытых заявок.</p>';
+            return;
+        }
+
+        requests.forEach(req => {
+            const div = document.createElement('div');
+            div.className = 'card';
+            div.style.backgroundColor = 'var(--tg-theme-bg-color)';
+            div.innerHTML = `
+                <h4>Заявка #${req.id} (Пользователь ID: ${req.user_id})</h4>
+                <p><b>Дата:</b> ${req.request_timestamp.substring(0, 16)}</p>
+                <p><b>Сообщение:</b> <i>${req.user_message}</i></p>
+                <textarea id="reply-${req.id}" rows="2" placeholder="Ваш ответ..."></textarea>
+                <button class="btn-primary" onclick="replyToRequest(${req.id})">Ответить и закрыть</button>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function replyToRequest(requestId) {
+        const replyText = document.getElementById(`reply-${requestId}`).value;
+        if (!replyText.trim()) {
+            tg.showAlert('Ответ не может быть пустым.');
+            return;
+        }
+        
+        tg.showConfirm(`Отправить ответ и закрыть заявку #${requestId}?`, (confirmed) => {
+            if (confirmed) {
+                sendData('admin_reply_request', { request_id: requestId, text: replyText });
+                // Перезагружаем список заявок после отправки
+                loadAdminRequests();
+            }
+        });
+    }
+
+    // --- Запуск приложения ---
+    sendData('get_initial_data');
+
+</script>
+
+</body>
+</html>
