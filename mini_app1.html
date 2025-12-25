@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Car Service App</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg-color: var(--tg-theme-bg-color, #ffffff);
+            --text-color: var(--tg-theme-text-color, #000000);
+            --hint-color: var(--tg-theme-hint-color, #999999);
+            --link-color: var(--tg-theme-link-color, #2481cc);
+            --button-color: var(--tg-theme-button-color, #50a8eb);
+            --button-text-color: var(--tg-theme-button-text-color, #ffffff);
+            --secondary-bg-color: var(--tg-theme-secondary-bg-color, #f3f3f3);
+            --red-color: #e53935;
+            --yellow-color: #ffb300;
+            --green-color: #43a047;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .container {
+            padding: 15px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+
+        .card {
+            background-color: var(--secondary-bg-color);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .card h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+            color: var(--link-color);
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(var(--text-color), 0.05);
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            color: var(--hint-color);
+        }
+
+        .info-value {
+            font-weight: 500;
+        }
+
+        .status-bar {
+            height: 10px;
+            background-color: var(--bg-color);
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        .status-fill {
+            height: 100%;
+            transition: width 0.5s;
+        }
+
+        .status-red { background-color: var(--red-color); }
+        .status-yellow { background-color: var(--yellow-color); }
+        .status-green { background-color: var(--green-color); }
+
+        .section-title {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin: 20px 0 10px 0;
+            color: var(--text-color);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn {
+            flex-grow: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            background-color: var(--button-color);
+            color: var(--button-text-color);
+            transition: background-color 0.2s;
+        }
+
+        .btn:active {
+            filter: brightness(0.9);
+        }
+
+        .btn-secondary {
+            background-color: var(--hint-color);
+        }
+
+        .history-item {
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(var(--text-color), 0.05);
+            font-size: 0.9em;
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
+        .history-date {
+            color: var(--hint-color);
+            font-size: 0.8em;
+            display: block;
+            margin-bottom: 3px;
+        }
+
+        /* Input Modal Styles */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .modal.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            background-color: var(--bg-color);
+            padding: 20px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-content h4 {
+            margin-top: 0;
+            color: var(--text-color);
+        }
+
+        .modal-content input, .modal-content textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid var(--hint-color);
+            border-radius: 8px;
+            box-sizing: border-box;
+            background-color: var(--secondary-bg-color);
+            color: var(--text-color);
+        }
+
+        .modal-content textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        /* Admin View Styles */
+        .admin-view .card {
+            margin-bottom: 20px;
+        }
+        
+        .admin-request-item {
+            padding: 10px;
+            border-bottom: 1px solid rgba(var(--text-color), 0.1);
+            cursor: pointer;
+        }
+        
+        .admin-request-item:hover {
+            background-color: rgba(var(--text-color), 0.05);
+        }
+        
+        .admin-request-item .date {
+            font-size: 0.8em;
+            color: var(--hint-color);
+        }
+        
+        .admin-request-item .message {
+            margin-top: 5px;
+            font-size: 0.9em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .admin-reply-modal textarea {
+            min-height: 150px;
+        }
+        
+        .no-car-message {
+            text-align: center;
+            padding: 50px 20px;
+            color: var(--hint-color);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app-container" class="container">
+        <!-- Content will be loaded here -->
+        <div id="main-content"></div>
+    </div>
+
+    <!-- Modals -->
+    <div id="mileage-modal" class="modal">
+        <div class="modal-content">
+            <h4>Обновить пробег</h4>
+            <p>Введите текущий пробег (в км):</p>
+            <input type="number" id="mileage-input" placeholder="Например, 125000">
+            <div class="btn-group">
+                <button class="btn btn-secondary" onclick="closeModal('mileage-modal')">Отмена</button>
+                <button class="btn" id="update-mileage-btn">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="service-modal" class="modal">
+        <div class="modal-content">
+            <h4>Запрос на сервис</h4>
+            <p>Опишите причину обращения:</p>
+            <textarea id="service-description" placeholder="Например: Плановое ТО, замена масла ДВС и фильтров."></textarea>
+            <div class="btn-group">
+                <button class="btn btn-secondary" onclick="closeModal('service-modal')">Отмена</button>
+                <button class="btn" id="send-service-request-btn">Отправить запрос</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="admin-reply-modal" class="modal admin-reply-modal">
+        <div class="modal-content">
+            <h4>Ответ на запрос <span id="reply-request-id"></span></h4>
+            <p>Сообщение пользователя:</p>
+            <div id="admin-request-message" style="padding: 10px; background-color: var(--secondary-bg-color); border-radius: 8px; margin-bottom: 15px; font-style: italic; font-size: 0.9em;"></div>
+            <p>Ваш ответ:</p>
+            <textarea id="admin-reply-text" placeholder="Введите ответ пользователю..."></textarea>
+            <div class="btn-group">
+                <button class="btn btn-secondary" onclick="closeModal('admin-reply-modal')">Отмена</button>
+                <button class="btn" id="send-admin-reply-btn">Отправить и закрыть</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        const TG = window.Telegram.WebApp;
+        let APP_DATA = {
+            car: null,
+            reminders: null,
+            history: [],
+            is_admin: false,
+            admin_requests: [],
+            selected_request_id: null
+        };
+
+        // --- Utility Functions ---
+        function formatMileage(km) {
+            if (km === undefined || km === null) return 'N/A';
+            return km.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + ' км';
+        }
+
+        function calculateStatus(remaining, interval) {
+            if (remaining === null || interval === 0) return { width: '0%', color: 'status-green', text: 'N/A' };
+            
+            const diff = interval - remaining;
+            let width = (diff / interval) * 100;
+            if (width < 0) width = 0;
+            if (width > 100) width = 100;
+
+            let color = 'status-green';
+            let text = `${formatMileage(remaining)} до замены`;
+            
+            const CRITICAL_MIN = 500;
+            const CRITICAL_MAX = 2000;
+
+            if (remaining <= 0) {
+                color = 'status-red';
+                text = `ПРОСРОЧЕНО на ${formatMileage(Math.abs(remaining))}`;
+            } else if (remaining <= CRITICAL_MIN) {
+                color = 'status-red';
+            } else if (remaining <= CRITICAL_MAX) {
+                color = 'status-yellow';
+            }
+
+            return { width: `${width}%`, color, text };
+        }
+
+        function showLoading(show) {
+            if (show) {
+                TG.MainButton.setText('Загрузка...').show().disable();
+            } else {
+                TG.MainButton.hide();
+            }
+        }
+
+        function showModal(id) {
+            document.getElementById(id).classList.add('active');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        // --- Telegram WebApp Communication ---
+
+        function sendData(action, data = {}) {
+            showLoading(true);
+            const payload = JSON.stringify({ action, ...data });
+            console.log('Sending data:', payload);
+            TG.sendData(payload);
+        }
+
+        function handleData(data) {
+            showLoading(false);
+            try {
+                const response = JSON.parse(data);
+                console.log('Received response:', response);
+                
+                if (response.status === 'error') {
+                    TG.showAlert(`Ошибка: ${response.message}`);
+                    return;
+                }
+
+                APP_DATA.is_admin = response.is_admin || false;
+                
+                if (response.action === 'get_initial_data') {
+                    APP_DATA.car = response.car;
+                    APP_DATA.reminders = response.reminders;
+                    APP_DATA.history = response.history;
+                    renderApp();
+                } else if (response.action === 'request_service') {
+                    TG.showPopup({ message: 'Заявка на сервис успешно отправлена!' });
+                    closeModal('service-modal');
+                } else if (response.action === 'update_mileage') {
+                    TG.showPopup({ message: 'Пробег успешно обновлен!' });
+                    closeModal('mileage-modal');
+                    sendData('get_initial_data'); // Reload data
+                } else if (response.action === 'admin_get_summary') {
+                    renderAdminDashboard(response.summary);
+                } else if (response.action === 'admin_get_requests') {
+                    APP_DATA.admin_requests = response.requests;
+                    renderAdminRequests();
+                } else if (response.action === 'admin_reply_request') {
+                    TG.showPopup({ message: 'Ответ отправлен, запрос закрыт.' });
+                    closeModal('admin-reply-modal');
+                    sendData('admin_get_requests'); // Reload requests
+                }
+                
+            } catch (e) {
+                console.error('Error handling data:', e);
+                TG.showAlert('Ошибка обработки данных от бота.');
+            }
+        }
+
+        // --- Rendering Functions ---
+
+        function renderApp() {
+            const content = document.getElementById('main-content');
+            content.innerHTML = '';
+            
+            if (APP_DATA.is_admin) {
+                sendData('admin_get_summary');
+                return;
+            }
+
+            if (!APP_DATA.car) {
+                content.innerHTML = `
+                    <div class="no-car-message">
+                        <p>К сожалению, к вашему аккаунту не привязан ни один автомобиль.</p>
+                        <p>Пожалуйста, привяжите автомобиль через бота, используя код привязки.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const car = APP_DATA.car;
+            const reminders = APP_DATA.reminders;
+
+            const oilStatus = calculateStatus(reminders.oil_remaining, 7000);
+            const variatorStatus = calculateStatus(reminders.variator_remaining, 30000);
+
+            let html = `
+                <div class="header">Мой автомобиль</div>
+                
+                <div class="card">
+                    <h3>${car.make} ${car.model}</h3>
+<div class="info-row">
+                        <span class="info-label">Гос. номер:</span>
+                        <span class="info-value">${car.license_plate}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Текущий пробег:</span>
+                        <span class="info-value">${formatMileage(car.current_mileage)}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Смена масла ДВС:</span>
+                        <span class="info-value">${car.last_oil_change_mileage ? formatMileage(car.last_oil_change_mileage) : 'N/A'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Дата смены ДВС:</span>
+                        <span class="info-value">${car.last_oil_change_date || 'N/A'}</span>
+                    </div>
+                </div>
+
+                <div class="section-title">Напоминания по пробегу</div>
+
+                <div class="card">
+                    <h3>Масло ДВС</h3>
+                    <div class="info-row">
+                        <span class="info-label">Осталось:</span>
+                        <span class="info-value">${oilStatus.text}</span>
+                    </div>
+                    <div class="status-bar">
+                        <div class="status-fill ${oilStatus.color}" style="width: ${oilStatus.width};"></div>
+                    </div>
+                    <div class="info-row" style="margin-top: 10px;">
+                        <span class="info-label">Масло вариатора:</span>
+                        <span class="info-value">${variatorStatus.text}</span>
+                    </div>
+                    <div class="status-bar">
+                        <div class="status-fill ${variatorStatus.color}" style="width: ${variatorStatus.width};"></div>
+                    </div>
+                    
+                    <div class="btn-group">
+                        <button class="btn btn-secondary" id="open-mileage-modal">Обновить пробег</button>
+                        <button class="btn" id="open-service-modal">Записаться на ТО</button>
+                    </div>
+                </div>
+
+                <div class="section-title">История обслуживания (последние 20)</div>
+                <div class="card" id="history-list">
+                    ${APP_DATA.history.length > 0 ? APP_DATA.history.map(item => `
+                        <div class="history-item">
+                            <span class="history-date">${item.date.substring(0, 10)}</span>
+                            <strong>${item.type}:</strong> ${item.note}
+                        </div>
+                    `).join('') : '<div class="info-row">Нет записей.</div>'}
+                </div>
+            `;
+            content.innerHTML = html;
+            attachEventListeners();
+        }
+        
+        function renderAdminDashboard(summary) {
+            const content = document.getElementById('main-content');
+            content.innerHTML = `
+                <div class="header">Административная панель</div>
+                
+                <div class="card">
+                    <h3>Общая статистика</h3>
+                    <div class="info-row">
+                        <span class="info-label">Всего автомобилей:</span>
+                        <span class="info-value">${summary.total_cars}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Открытых заявок:</span>
+                        <span class="info-value" style="color: ${summary.open_requests > 0 ? 'var(--red-color)' :
+                        'var(--green-color)'};">${summary.open_requests}</span>
+                    </div>
+                </div>
+                
+                <div class="section-title">Управление заявками</div>
+                <div class="btn-group">
+                    <button class="btn" onclick="sendData('admin_get_requests')">Посмотреть заявки (${summary.open_requests})</button>
+                </div>
+            `;
+        }
+        
+        function renderAdminRequests() {
+            const content = document.getElementById('main-content');
+            content.innerHTML = `
+                <div class="header">Открытые заявки (${APP_DATA.admin_requests.length})</div>
+                <div class="card" id="admin-requests-list">
+                    ${APP_DATA.admin_requests.length > 0 ? APP_DATA.admin_requests.map(req => `
+                        <div class="admin-request-item" data-request-id="${req.id}" onclick="openAdminReplyModal(${req.id}, '${req.description.replace(/'/g, "\\'")}')">
+                            <span class="date">#${req.id} | ${req.request_timestamp.substring(0, 16)}</span>
+                            <div class="message">${req.description}</div>
+                            <small style="color: var(--link-color);">Авто: ${req.car_info}</small>
+                        </div>
+                    `).join('') : '<div class="info-row">Нет открытых заявок.</div>'}
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-secondary" onclick="sendData('admin_get_summary')">← Назад</button>
+                </div>
+            `;
+        }
+        
+        function openAdminReplyModal(requestId, message) {
+            APP_DATA.selected_request_id = requestId;
+            document.getElementById('reply-request-id').textContent = `#${requestId}`;
+            document.getElementById('admin-request-message').textContent = message;
+            document.getElementById('admin-reply-text').value = '';
+            showModal('admin-reply-modal');
+        }
+
+
+        // --- Event Listeners ---
+
+        function attachEventListeners() {
+            // User View
+            const updateMileageBtn = document.getElementById('update-mileage-btn');
+            if (updateMileageBtn) {
+                document.getElementById('open-mileage-modal').onclick = () => {
+                    document.getElementById('mileage-input').value = APP_DATA.car.current_mileage;
+                    showModal('mileage-modal');
+                };
+                
+                updateMileageBtn.onclick = () => {
+                    const mileage = parseInt(document.getElementById('mileage-input').value);
+                    if (isNaN(mileage) || mileage < 0) {
+                        TG.showAlert('Пожалуйста, введите корректный пробег.');
+                        return;
+                    }
+                    if (mileage < APP_DATA.car.current_mileage) {
+                        TG.showAlert('Новый пробег не может быть меньше текущего.');
+                        return;
+                    }
+                    sendData('update_mileage', { car_id: APP_DATA.car.id, mileage });
+                };
+            }
+            
+            const sendServiceRequestBtn = document.getElementById('send-service-request-btn');
+            if (sendServiceRequestBtn) {
+                document.getElementById('open-service-modal').onclick = () => {
+                    document.getElementById('service-description').value = '';
+                    showModal('service-modal');
+                };
+                
+                sendServiceRequestBtn.onclick = () => {
+                    const description = document.getElementById('service-description').value.trim();
+                    if (description.length < 10) {
+                        TG.showAlert('Пожалуйста, опишите причину обращения более подробно.');
+                        return;
+                    }
+                    sendData('request_service', { 
+                        car_id: APP_DATA.car.id, 
+                        description: description,
+                        mileage: APP_DATA.car.current_mileage,
+                        reason: 'Запрос на сервис'
+                    });
+                };
+            }
+            
+            // Admin View
+            const sendAdminReplyBtn = document.getElementById('send-admin-reply-btn');
+            if (sendAdminReplyBtn) {
+                sendAdminReplyBtn.onclick = () => {
+                    const replyText = document.getElementById('admin-reply-text').value.trim();
+                    if (replyText.length < 5) {
+                        TG.showAlert('Введите ответ.');
+                        return;
+                    }
+                    sendData('admin_reply_request', {
+                        request_id: APP_DATA.selected_request_id,
+                        text: replyText
+                    });
+                };
+            }
+        }
+
+        // --- Initialization ---
+
+        TG.ready();
+        TG.expand();
+        
+        // Listen for data sent from the bot
+        TG.onEvent('webAppQuery', (query) => {
+            handleData(query.data);
+        });
+
+        // Start by requesting initial data
+        sendData('get_initial_data');
+    </script>
+</body>
+</html>
